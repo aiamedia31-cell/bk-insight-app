@@ -17,7 +17,7 @@ export const DashboardGuru: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 md:py-8 space-y-4 md:space-y-6">
       
       {/* Navigation Tabs */}
       <div className="flex items-center space-x-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
@@ -89,7 +89,7 @@ export const DashboardGuru: React.FC = () => {
       {activeTab === 'manajemen_asesmen' && <AssessmentManager />}
       {activeTab === 'sosiogram' && (
         <div className="space-y-4">
-          <div className="flex items-center space-x-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <span className="text-xs font-bold text-slate-700">Pilih Kelas Sosiogram:</span>
             <select
               value={selectedClassId}

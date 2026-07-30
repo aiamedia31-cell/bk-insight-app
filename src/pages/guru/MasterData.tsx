@@ -52,7 +52,7 @@ export const MasterData: React.FC = () => {
     <div className="space-y-6">
       
       {/* Header & Excel Upload Section */}
-      <div className="bg-white rounded-3xl p-6 border border-emerald-100 shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-emerald-100 shadow-xl relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
         <div>
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 mb-2">
             <Users className="w-3.5 h-3.5" />
@@ -65,7 +65,7 @@ export const MasterData: React.FC = () => {
         </div>
 
         {/* Excel Upload Box */}
-        <div className="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200 flex items-center space-x-4 shrink-0">
+        <div className="bg-emerald-50/70 rounded-2xl p-4 border border-emerald-200 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3 sm:gap-0 sm:space-x-4 shrink-0">
           <div className="p-3 rounded-xl bg-emerald-600 text-white shadow-md">
             <FileSpreadsheet className="w-6 h-6" />
           </div>
@@ -114,7 +114,7 @@ export const MasterData: React.FC = () => {
       )}
 
       {/* Filter & Search Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         
         {/* Class Filter */}
         <div className="flex items-center space-x-2 w-full sm:w-auto">

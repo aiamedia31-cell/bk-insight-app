@@ -170,7 +170,7 @@ export const SociogramGraph: React.FC<SociogramGraphProps> = ({ kelasId }) => {
           <span className="text-[11px] text-slate-500 font-medium hidden sm:block">Formula Jacob L. Moreno: CS = Σp / (N-1)</span>
         </div>
 
-        <div className="w-full h-[600px] bg-slate-50 rounded-2xl border border-slate-200 relative overflow-hidden">
+        <div className="w-full h-[350px] sm:h-[500px] md:h-[600px] bg-slate-50 rounded-2xl border border-slate-200 relative overflow-hidden">
           {/* SVG Connection Lines */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
             <defs>
@@ -240,7 +240,7 @@ export const SociogramGraph: React.FC<SociogramGraphProps> = ({ kelasId }) => {
         </div>
 
         {/* Legend */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-600">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-[10px] sm:text-xs text-slate-600">
           <div className="flex items-center space-x-1.5">
             <span className="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
             <span className="font-semibold">Bintang Kelas (Popular)</span>
