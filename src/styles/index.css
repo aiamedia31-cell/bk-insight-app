@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 min-h-screen font-sans selection:bg-emerald-500 selection:text-white touch-manipulation overscroll-y-none;
+  }
+
+  /* Prevent auto-zoom on mobile inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Keyframe Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+/* Glassmorphism Utilities - Mobile Optimized */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.08);
+}
+
+.glass-card {
+  background: #ffffff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+}
+
+.glass-card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-card-hover:active {
+  transform: scale(0.98);
+  background: #f8fafc;
+}
+
+@media (min-width: 640px) {
+  .glass-card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.15);
+  }
+}
+
+/* Touch Active Animation */
+.active-touch {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.active-touch:active {
+  transform: scale(0.96);
+}
+
+/* Custom scrollbar for touch devices */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
