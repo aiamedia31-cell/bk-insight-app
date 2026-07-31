@@ -20,6 +20,8 @@ import {
   SociometricResult,
   MIResult,
 } from './engine/ruleEngine';
+import { AKPD_INTERPRETATION_BANK } from './engine/akpdInterpretation';
+import { AUM_INTERPRETATION_BANK, BULLYING_INTERPRETATION_BANK, MOTIVASI_INTERPRETATION_BANK, SELF_ESTEEM_INTERPRETATION_BANK } from './engine/instrumentInterpretations';
 
 export interface ClassData {
   id: string;
@@ -420,6 +422,7 @@ export class DataService {
     const studentResponses = await this.getStudentResponses(studentId);
     const allSociometric = await this.getSociometricChoices();
     const classStudents = await this.getStudentsByClass(student.kelas_id);
+    const akpdQuestions = await this.getQuestions('akpd_7');
 
     let akpdRes: AKPDResult | undefined;
     let aumRes: AUMResult | undefined;
@@ -430,11 +433,51 @@ export class DataService {
     let miRes: MIResult | undefined;
 
     studentResponses.forEach(r => {
-      if (r.instrument_id === 'akpd_7') akpdRes = calculateAKPD(r.jawaban);
-      if (r.instrument_id === 'aum') aumRes = calculateAUM(r.jawaban);
-      if (r.instrument_id === 'bullying') bullyingRes = calculateBullying(r.jawaban);
-      if (r.instrument_id === 'motivasi') motivasiRes = calculateMotivasi(r.jawaban);
-      if (r.instrument_id === 'self_esteem') selfEsteemRes = calculateSelfEsteem(r.jawaban);
+      if (r.instrument_id === 'akpd_7') {
+        akpdRes = calculateAKPD(r.jawaban);
+        if (akpdRes.prioritasUtamaIds && akpdRes.prioritasUtamaIds.length > 0) {
+          akpdRes.detailMasalah = akpdRes.prioritasUtamaIds
+            .map(id => AKPD_INTERPRETATION_BANK[id] || akpdQuestions.find(q => q.id === id)?.pernyataan)
+            .filter(Boolean)
+            .slice(0, 5) as string[];
+        }
+      }
+      if (r.instrument_id === 'aum') {
+        aumRes = calculateAUM(r.jawaban);
+        if (aumRes.jawabanYaIds && aumRes.jawabanYaIds.length > 0) {
+          aumRes.detailMasalah = aumRes.jawabanYaIds
+            .map(id => AUM_INTERPRETATION_BANK[id])
+            .filter(Boolean)
+            .slice(0, 5) as string[];
+        }
+      }
+      if (r.instrument_id === 'bullying') {
+        bullyingRes = calculateBullying(r.jawaban);
+        if (bullyingRes.jawabanBermasalahIds && bullyingRes.jawabanBermasalahIds.length > 0) {
+          bullyingRes.detailMasalah = bullyingRes.jawabanBermasalahIds
+            .map(id => BULLYING_INTERPRETATION_BANK[id])
+            .filter(Boolean)
+            .slice(0, 3) as string[];
+        }
+      }
+      if (r.instrument_id === 'motivasi') {
+        motivasiRes = calculateMotivasi(r.jawaban);
+        if (motivasiRes.jawabanBermasalahIds && motivasiRes.jawabanBermasalahIds.length > 0) {
+          motivasiRes.detailMasalah = motivasiRes.jawabanBermasalahIds
+            .map(id => MOTIVASI_INTERPRETATION_BANK[id])
+            .filter(Boolean)
+            .slice(0, 3) as string[];
+        }
+      }
+      if (r.instrument_id === 'self_esteem') {
+        selfEsteemRes = calculateSelfEsteem(r.jawaban);
+        if (selfEsteemRes.jawabanBermasalahIds && selfEsteemRes.jawabanBermasalahIds.length > 0) {
+          selfEsteemRes.detailMasalah = selfEsteemRes.jawabanBermasalahIds
+            .map(id => SELF_ESTEEM_INTERPRETATION_BANK[id])
+            .filter(Boolean)
+            .slice(0, 3) as string[];
+        }
+      }
       if (r.instrument_id === 'multiple_intelligence') miRes = calculateMI(r.jawaban);
     });
 

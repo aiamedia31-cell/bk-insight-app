@@ -238,6 +238,18 @@ export const IntegratedProfile: React.FC = () => {
                 <div>
                   <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mb-1">Prioritas Layanan</p>
                   <p className="text-lg font-black text-emerald-700 mb-3">Bidang {akpd.prioritasUtama}</p>
+                  
+                  {akpd.detailMasalah && akpd.detailMasalah.length > 0 && (
+                    <div className="mb-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                      <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-2">Masalah Dominan Terdeteksi:</p>
+                      <ul className="list-disc list-outside ml-4 text-xs text-amber-900 space-y-1 leading-relaxed">
+                        {akpd.detailMasalah.map((masalah: string, idx: number) => (
+                          <li key={idx} className="pl-1">{masalah}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     <div>Pribadi: <strong className="text-slate-900">{akpd.pribadi}%</strong></div>
                     <div>Sosial: <strong className="text-slate-900">{akpd.sosial}%</strong></div>
@@ -266,6 +278,18 @@ export const IntegratedProfile: React.FC = () => {
                   <p className={`text-lg font-black mb-3 ${aum.tingkatMasalah === 'Tinggi' ? 'text-rose-600' : 'text-amber-600'}`}>
                     {aum.tingkatMasalah === 'Tinggi' ? 'Masalah Berat' : aum.tingkatMasalah === 'Sedang' ? 'Perlu Perhatian' : 'Relatif Aman'}
                   </p>
+                  
+                  {aum.detailMasalah && aum.detailMasalah.length > 0 && (
+                    <div className="mb-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                      <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-2">Masalah Spesifik Terdeteksi:</p>
+                      <ul className="list-disc list-outside ml-4 text-xs text-amber-900 space-y-1 leading-relaxed">
+                        {aum.detailMasalah.map((masalah: string, idx: number) => (
+                          <li key={idx} className="pl-1">{masalah}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     Dominan di bidang: <strong className="text-slate-900">{aum.masalahDominan.length > 0 ? aum.masalahDominan.join(', ') : 'Tidak ada'}</strong>.
                   </p>
@@ -291,6 +315,18 @@ export const IntegratedProfile: React.FC = () => {
                   <p className={`text-lg font-black mb-3 ${bullying.peran === 'Aman' ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {bullying.peran}
                   </p>
+                  
+                  {bullying.detailMasalah && bullying.detailMasalah.length > 0 && (
+                    <div className="mb-3 p-3 bg-rose-50 border border-rose-100 rounded-xl">
+                      <p className="text-[10px] font-bold text-rose-700 uppercase tracking-wider mb-2">Indikasi Perundungan:</p>
+                      <ul className="list-disc list-outside ml-4 text-xs text-rose-900 space-y-1 leading-relaxed">
+                        {bullying.detailMasalah.map((masalah: string, idx: number) => (
+                          <li key={idx} className="pl-1">{masalah}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     Skor Tingkat Risiko Bullying: <strong className="text-slate-900">{bullying.tingkatRisiko}</strong>.
                   </p>
@@ -316,6 +352,18 @@ export const IntegratedProfile: React.FC = () => {
                   <p className={`text-lg font-black mb-3 ${selfEsteem.tingkat === 'Tinggi' ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {selfEsteem.tingkat}
                   </p>
+
+                  {selfEsteem.detailMasalah && selfEsteem.detailMasalah.length > 0 && (
+                    <div className="mb-3 p-3 bg-pink-50 border border-pink-100 rounded-xl">
+                      <p className="text-[10px] font-bold text-pink-700 uppercase tracking-wider mb-2">Aspek Harga Diri Rendah:</p>
+                      <ul className="list-disc list-outside ml-4 text-xs text-pink-900 space-y-1 leading-relaxed">
+                        {selfEsteem.detailMasalah.map((masalah: string, idx: number) => (
+                          <li key={idx} className="pl-1">{masalah}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     Mencapai skor total <strong className="text-slate-900">{selfEsteem.skorRSES}</strong> dari skala Rosenberg (10 soal).
                   </p>
@@ -341,6 +389,18 @@ export const IntegratedProfile: React.FC = () => {
                   <p className={`text-lg font-black mb-3 ${motivasi.tingkatMotivasi === 'Sangat Tinggi' || motivasi.tingkatMotivasi === 'Tinggi' ? 'text-emerald-600' : motivasi.tingkatMotivasi === 'Sedang' ? 'text-indigo-600' : 'text-rose-600'}`}>
                     {motivasi.tingkatMotivasi}
                   </p>
+                  
+                  {motivasi.detailMasalah && motivasi.detailMasalah.length > 0 && (
+                    <div className="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
+                      <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-2">Faktor Demotivasi:</p>
+                      <ul className="list-disc list-outside ml-4 text-xs text-indigo-900 space-y-1 leading-relaxed">
+                        {motivasi.detailMasalah.map((masalah: string, idx: number) => (
+                          <li key={idx} className="pl-1">{masalah}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                     Skor: <strong className="text-slate-900">{motivasi.totalSkor}</strong>.
                   </p>

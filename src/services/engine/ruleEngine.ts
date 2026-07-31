@@ -11,18 +11,24 @@ export interface AKPDResult {
   karier: number;
   totalKebutuhan: number;
   prioritasUtama: 'Pribadi' | 'Sosial' | 'Belajar' | 'Karier';
+  prioritasUtamaIds?: number[];
+  detailMasalah?: string[];
 }
 
 export interface AUMResult {
   masalahDominan: string[];
   skorPerDomain: Record<string, number>;
   tingkatMasalah: 'Tinggi' | 'Sedang' | 'Rendah';
+  jawabanYaIds?: number[];
+  detailMasalah?: string[];
 }
 
 export interface BullyingResult {
   peran: 'Korban Sangat Rentan' | 'Korban Ringan' | 'Aman';
   skorKorban: number;
   tingkatRisiko: 'Tinggi' | 'Sedang' | 'Rendah';
+  jawabanBermasalahIds?: number[];
+  detailMasalah?: string[];
 }
 
 export interface MotivasiResult {
@@ -31,6 +37,8 @@ export interface MotivasiResult {
   skorEkstrinsik: number;
   skorKetekunan: number;
   totalSkor: number;
+  jawabanBermasalahIds?: number[];
+  detailMasalah?: string[];
 }
 
 export interface SelfEsteemResult {
@@ -38,6 +46,8 @@ export interface SelfEsteemResult {
   skorRSES: number; // Range 10 - 40
   penghargaanDiri: number;
   penerimaanDiri: number;
+  jawabanBermasalahIds?: number[];
+  detailMasalah?: string[];
 }
 
 export interface SociometricStudentChoice {
@@ -63,10 +73,15 @@ export interface MIResult {
 // -------------------------------------------------------
 export function calculateAKPD(responses: Record<number, number>): AKPDResult {
   // Soal 1-10: Pribadi, 11-20: Sosial, 21-30: Belajar, 31-40: Karier
-  const countPribadi = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(id => responses[id] === 1).length;
-  const countSosial = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20].filter(id => responses[id] === 1).length;
-  const countBelajar = [21, 22, 23, 24, 25, 26, 27, 28, 29, 30].filter(id => responses[id] === 1).length;
-  const countKarier = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40].filter(id => responses[id] === 1).length;
+  const idsPribadi = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(id => responses[id] === 1);
+  const idsSosial = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20].filter(id => responses[id] === 1);
+  const idsBelajar = [21, 22, 23, 24, 25, 26, 27, 28, 29, 30].filter(id => responses[id] === 1);
+  const idsKarier = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40].filter(id => responses[id] === 1);
+
+  const countPribadi = idsPribadi.length;
+  const countSosial = idsSosial.length;
+  const countBelajar = idsBelajar.length;
+  const countKarier = idsKarier.length;
 
   const pctPribadi = Math.round((countPribadi / 10) * 100);
   const pctSosial = Math.round((countSosial / 10) * 100);
@@ -74,10 +89,10 @@ export function calculateAKPD(responses: Record<number, number>): AKPDResult {
   const pctKarier = Math.round((countKarier / 10) * 100);
 
   const domains = [
-    { name: 'Pribadi' as const, val: pctPribadi },
-    { name: 'Sosial' as const, val: pctSosial },
-    { name: 'Belajar' as const, val: pctBelajar },
-    { name: 'Karier' as const, val: pctKarier },
+    { name: 'Pribadi' as const, val: pctPribadi, ids: idsPribadi },
+    { name: 'Sosial' as const, val: pctSosial, ids: idsSosial },
+    { name: 'Belajar' as const, val: pctBelajar, ids: idsBelajar },
+    { name: 'Karier' as const, val: pctKarier, ids: idsKarier },
   ];
   domains.sort((a, b) => b.val - a.val);
 
@@ -90,6 +105,7 @@ export function calculateAKPD(responses: Record<number, number>): AKPDResult {
     karier: pctKarier,
     totalKebutuhan,
     prioritasUtama: domains[0].name,
+    prioritasUtamaIds: domains[0].ids,
   };
 }
 
@@ -110,6 +126,7 @@ export function calculateAUM(responses: Record<number, number>): AUMResult {
 
   const skorPerDomain: Record<string, number> = {};
   let totalYa = 0;
+  const jawabanYaIds: number[] = [];
 
   Object.entries(responses).forEach(([qId, val]) => {
     const qNum = parseInt(qId, 10);
@@ -118,6 +135,7 @@ export function calculateAUM(responses: Record<number, number>): AUMResult {
     if (val === 1) {
       skorPerDomain[domain] += 1;
       totalYa += 1;
+      jawabanYaIds.push(qNum);
     }
   });
 
@@ -133,6 +151,7 @@ export function calculateAUM(responses: Record<number, number>): AUMResult {
     masalahDominan: sortedDomains.slice(0, 3),
     skorPerDomain,
     tingkatMasalah,
+    jawabanYaIds,
   };
 }
 
@@ -142,6 +161,10 @@ export function calculateAUM(responses: Record<number, number>): AUMResult {
 export function calculateBullying(responses: Record<number, number>): BullyingResult {
   // 3T Version Extended: All 10 questions measure Victimization (Korban)
   const skorKorban = Object.values(responses).reduce((sum, val) => sum + (val || 1), 0);
+  const jawabanBermasalahIds: number[] = [];
+  Object.entries(responses).forEach(([qId, val]) => {
+    if (val >= 2) jawabanBermasalahIds.push(Number(qId));
+  });
 
   let peran: BullyingResult['peran'] = 'Aman';
   let tingkatRisiko: BullyingResult['tingkatRisiko'] = 'Rendah';
@@ -162,6 +185,7 @@ export function calculateBullying(responses: Record<number, number>): BullyingRe
     peran,
     skorKorban,
     tingkatRisiko,
+    jawabanBermasalahIds,
   };
 }
 
@@ -174,6 +198,11 @@ export function calculateMotivasi(responses: Record<number, number>): MotivasiRe
   const skorKetekunan = (responses[5]||0) + (responses[6]||0) + (responses[7]||0);
   
   const totalSkor = skorIntrinsik + skorEkstrinsik + skorKetekunan;
+  const jawabanBermasalahIds: number[] = [];
+  if (responses[3] >= 3) jawabanBermasalahIds.push(3);
+  if (responses[4] >= 3) jawabanBermasalahIds.push(4);
+  if (responses[6] <= 2 && responses[6] > 0) jawabanBermasalahIds.push(6);
+  if (responses[9] >= 3) jawabanBermasalahIds.push(9);
 
   let tingkatMotivasi: MotivasiResult['tingkatMotivasi'] = 'Sedang';
   if (totalSkor >= 32) tingkatMotivasi = 'Sangat Tinggi';
@@ -187,6 +216,7 @@ export function calculateMotivasi(responses: Record<number, number>): MotivasiRe
     skorEkstrinsik,
     skorKetekunan,
     totalSkor,
+    jawabanBermasalahIds,
   };
 }
 
@@ -197,14 +227,21 @@ export function calculateSelfEsteem(responses: Record<number, number>): SelfEste
   let totalSkor = 0;
   let penghargaanDiri = 0;
   let penerimaanDiri = 0;
+  const jawabanBermasalahIds: number[] = [];
 
   // Values in TakeAssessment are already reverse-scored in the UI payload (1-4).
   Object.entries(responses).forEach(([qId, val]) => {
     const numVal = Number(val);
+    const numId = Number(qId);
     totalSkor += numVal;
     // qId ganjil: Positif (1,3,5,7,9), qId genap: Negatif (2,4,6,8,10)
-    if ([1, 3, 5, 7, 9].includes(Number(qId))) penghargaanDiri += numVal;
-    else penerimaanDiri += numVal;
+    if ([1, 3, 5, 7, 9].includes(numId)) penghargaanDiri += numVal;
+    else {
+      penerimaanDiri += numVal;
+      // In UI payload, values for negative items are reverse scored (1=Sangat Setuju).
+      // Sangat Setuju/Setuju pada hal negatif = bermasalah (value <= 2).
+      if (numVal <= 2 && numVal > 0) jawabanBermasalahIds.push(numId);
+    }
   });
 
   // Max score for 10 questions is 40.
@@ -218,6 +255,7 @@ export function calculateSelfEsteem(responses: Record<number, number>): SelfEste
     skorRSES: totalSkor,
     penghargaanDiri,
     penerimaanDiri,
+    jawabanBermasalahIds,
   };
 }
 
