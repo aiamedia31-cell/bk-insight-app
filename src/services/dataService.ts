@@ -487,7 +487,9 @@ export class DataService {
       peringkat: c.peringkat,
     }));
 
-    sociometricRes = calculateSociometry(studentId, classStudents.length, mappedChoices);
+    if (allSociometric.length > 0) {
+      sociometricRes = calculateSociometry(studentId, classStudents.length, mappedChoices);
+    }
 
     const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricRes, miRes);
 
