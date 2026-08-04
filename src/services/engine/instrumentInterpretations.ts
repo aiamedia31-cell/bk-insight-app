@@ -69,3 +69,62 @@ export const SELF_ESTEEM_INTERPRETATION_BANK: Record<number, string> = {
   8: "Keinginan kuat menjadi orang lain (Penolakan identitas diri).",
   10: "Ketidakpuasan tinggi terhadap penampilan fisik (Body Image Negatif)."
 };
+
+// -----------------------------------------------------------------
+// RISIKO PERILAKU — Interpretation Bank
+// Domain A Regular: item dijawab >= 3 (Kadang-kadang ke atas) = berisiko
+// Domain A Reverse: item dijawab <= 2 (tidak aman karena skor risiko = 6-answer >= 4)
+// Domain B Negatif: item dijawab >= 3
+// -----------------------------------------------------------------
+export const RISIKO_PERILAKU_INTERPRETATION_BANK: Record<number, string> = {
+  // Domain A - Kontrol Diri (regular)
+  1:  "Kesulitan mengendalikan reaksi emosional — cenderung bereaksi impulsif saat marah.",
+  8:  "Reaksi spontan tanpa pertimbangan akibat — indikasi lemahnya kontrol diri situasional.",
+  22: "Mudah terprovokasi oleh perilaku orang lain — ambang batas emosi rendah.",
+  41: "Bertindak agresif saat emosi memuncak tanpa deliberasi terlebih dahulu.",
+  // Kontrol Diri (reverse - berisiko jika jawaban rendah)
+  12: "Kesulitan mengelola reaksi emosional saat marah (tidak sempat pikir akibat).",
+  46: "Kesulitan menahan ucapan kasar saat emosi meningkat.",
+  54: "Kecenderungan reaktif — jarang berpikir panjang sebelum bertindak.",
+  // Domain A - Pengaruh Teman (regular)
+  5:  "Kecenderungan mengikuti ajakan teman tanpa proses penyaringan yang memadai.",
+  9:  "Kesulitan asertif — sulit menolak ajakan teman meski tidak ingin.",
+  20: "Konformitas berlebihan — menyesuaikan diri dengan teman untuk menghindari penolakan.",
+  28: "Tekanan kelompok (peer pressure) kuat — ikut serta demi tidak tampak berbeda.",
+  51: "Orientasi kuat pada penerimaan sosial — popularitas dianggap prioritas utama.",
+  // Pengaruh Teman (reverse)
+  39: "Lemahnya asertivitas — sulit berkata tidak kepada teman sebaya.",
+  // Domain A - Sensation Seeking (regular)
+  3:  "Tertarik pada sensasi dari hal terlarang — risiko sebagai daya tarik, bukan hambatan.",
+  16: "Kecenderungan mencoba hal baru tanpa pertimbangan risiko yang matang.",
+  24: "Riwayat pelanggaran aturan yang dimotivasi oleh pencarian kesenangan.",
+  43: "Pencarian tantangan meski berpotensi mengakibatkan masalah (thrill-seeking).",
+  49: "Rasa ingin tahu aktif terhadap hal-hal yang dilarang atau tersembunyi.",
+  59: "Kesiapan kognitif melanggar norma jika situasi dianggap mengizinkan.",
+  // Sensation Seeking (reverse)
+  35: "Tingginya kecenderungan mengambil risiko — tidak memilih pilihan aman sebagai preferensi.",
+  // Domain A - Kejujuran & Tanggung Jawab (regular)
+  11: "Penggunaan kebohongan sebagai strategi menghindari konsekuensi.",
+  14: "Kecenderungan blame-shifting (menyalahkan orang lain untuk melindungi diri sendiri).",
+  29: "Rendahnya konsistensi komitmen — sering tidak menepati janji yang dibuat.",
+  36: "Pola penghindaran tanggung jawab akademis melalui alibi kepada guru.",
+  38: "Riwayat kecurangan akademis yang dimotivasi rasa takut akan nilai buruk.",
+  48: "Kecenderungan mengabaikan hak milik orang lain di lingkungan sekitar.",
+  // Kejujuran & Tanggung Jawab (reverse)
+  7:  "Rendahnya kemandirian mengerjakan tugas — mudah menyerah atau bergantung pada orang lain.",
+  26: "Kesulitan mengakui kesalahan secara terbuka dan bertanggung jawab.",
+  56: "Rendahnya tanggung jawab atas dampak kesalahan yang diperbuat kepada orang lain.",
+  // Domain A - Kepatuhan Aturan (regular)
+  17: "Kecenderungan kognitif menantang atau melanggar peraturan sekolah.",
+  27: "Memanfaatkan ketidakhadiran guru untuk keluar kelas tanpa izin.",
+  // Kepatuhan Aturan (reverse)
+  53: "Rendahnya kepatuhan hadir ke sekolah — kemalasan berpotensi membentuk pola absen.",
+  // Domain A - Resolusi Konflik (regular)
+  31: "Dampak nyata dari perilaku impulsif sebelumnya — pola penyesalan pasca tindakan.",
+  33: "Kecenderungan agresif-reaktif saat mendapat ejekan atau provokasi.",
+  44: "Pernah terlibat dalam perilaku kelompok yang merugikan teman lain.",
+  // Resolusi Konflik (reverse)
+  19: "Kecenderungan menghindari dialog konstruktif — memilih diam atau konfrontatif.",
+  // Domain B - Negatif (berisiko jika dijawab >= 3)
+  10: "Perasaan kesepian dan terasing secara emosional meski tinggal bersama keluarga.",
+};

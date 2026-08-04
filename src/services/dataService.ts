@@ -12,6 +12,7 @@ import {
   calculateSelfEsteem,
   calculateSociometry,
   calculateMI,
+  calculateRisikoPerilaku,
   AKPDResult,
   AUMResult,
   BullyingResult,
@@ -19,9 +20,10 @@ import {
   SelfEsteemResult,
   SociometricResult,
   MIResult,
+  RisikoPerilakuResult,
 } from './engine/ruleEngine';
 import { AKPD_INTERPRETATION_BANK } from './engine/akpdInterpretation';
-import { AUM_INTERPRETATION_BANK, BULLYING_INTERPRETATION_BANK, MOTIVASI_INTERPRETATION_BANK, SELF_ESTEEM_INTERPRETATION_BANK } from './engine/instrumentInterpretations';
+import { AUM_INTERPRETATION_BANK, BULLYING_INTERPRETATION_BANK, MOTIVASI_INTERPRETATION_BANK, SELF_ESTEEM_INTERPRETATION_BANK, RISIKO_PERILAKU_INTERPRETATION_BANK } from './engine/instrumentInterpretations';
 
 export interface ClassData {
   id: string;
@@ -431,6 +433,7 @@ export class DataService {
     let selfEsteemRes: SelfEsteemResult | undefined;
     let sociometricRes: SociometricResult | undefined;
     let miRes: MIResult | undefined;
+    let risikoPerilakuRes: RisikoPerilakuResult | undefined;
 
     studentResponses.forEach(r => {
       if (r.instrument_id === 'akpd_7') {
@@ -479,6 +482,25 @@ export class DataService {
         }
       }
       if (r.instrument_id === 'multiple_intelligence') miRes = calculateMI(r.jawaban);
+      if (r.instrument_id === 'risiko_perilaku') {
+        risikoPerilakuRes = calculateRisikoPerilaku(r.jawaban);
+        // Populate detailMasalah dari interpretation bank
+        // Domain A regular: berisiko jika dijawab >= 3
+        const A_REGULAR_IDS = [1,3,5,8,9,11,14,16,17,20,22,24,27,28,29,31,33,36,38,41,43,44,48,49,51,59];
+        // Domain A reverse: berisiko jika jawaban asli <= 2 (risk score = 6-val >= 4)
+        const A_REVERSE_IDS = [7,12,19,26,35,39,46,53,54,56];
+        // Domain B negative: berisiko jika dijawab >= 3
+        const B_NEGATIVE_IDS = [10];
+        const concerningIds: number[] = [
+          ...A_REGULAR_IDS.filter(id => (r.jawaban[id] || 1) >= 2),           // Skala 1-3: >= Kadang-kadang
+          ...A_REVERSE_IDS.filter(id => (r.jawaban[id] || 3) <= 2),           // Reverse: jawaban rendah = risiko
+          ...B_NEGATIVE_IDS.filter(id => (r.jawaban[id] || 1) >= 2),          // B negatif: >= Kadang-kadang
+        ];
+        risikoPerilakuRes.detailMasalah = concerningIds
+          .map(id => RISIKO_PERILAKU_INTERPRETATION_BANK[id])
+          .filter(Boolean)
+          .slice(0, 5) as string[];
+      }
     });
 
     const mappedChoices = allSociometric.map(c => ({
@@ -491,7 +513,7 @@ export class DataService {
       sociometricRes = calculateSociometry(studentId, classStudents.length, mappedChoices);
     }
 
-    const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricRes, miRes);
+    const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricRes, miRes, risikoPerilakuRes);
 
     return {
       student,
@@ -502,6 +524,7 @@ export class DataService {
       selfEsteem: selfEsteemRes,
       sosiometri: sociometricRes,
       mi: miRes,
+      risikoPerilaku: risikoPerilakuRes,
       dss,
     };
   }
@@ -561,6 +584,8 @@ export class DataService {
         let selfEsteemRes: SelfEsteemResult | undefined;
         let miRes: MIResult | undefined;
 
+        let risikoPerilakuRes: RisikoPerilakuResult | undefined;
+
         studentResponses.forEach(r => {
           if (r.instrument_id === 'akpd_7') akpdRes = calculateAKPD(r.jawaban);
           if (r.instrument_id === 'aum') aumRes = calculateAUM(r.jawaban);
@@ -568,10 +593,11 @@ export class DataService {
           if (r.instrument_id === 'motivasi') motivasiRes = calculateMotivasi(r.jawaban);
           if (r.instrument_id === 'self_esteem') selfEsteemRes = calculateSelfEsteem(r.jawaban);
           if (r.instrument_id === 'multiple_intelligence') miRes = calculateMI(r.jawaban);
+          if (r.instrument_id === 'risiko_perilaku') risikoPerilakuRes = calculateRisikoPerilaku(r.jawaban);
         });
 
         const sociometricRes = calculateSociometry(student.id, classStudents.length, mappedChoices);
-        const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricRes, miRes);
+        const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricRes, miRes, risikoPerilakuRes);
 
         if (dss?.tingkatRisikoGlobal) {
           summary.riskLevels[dss.tingkatRisikoGlobal] = (summary.riskLevels[dss.tingkatRisikoGlobal] || 0) + 1;

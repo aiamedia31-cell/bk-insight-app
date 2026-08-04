@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   Calendar,
   User as UserIcon,
-  RotateCcw
+  RotateCcw,
+  ShieldAlert,
+  Home as HomeIcon
 } from 'lucide-react';
 
 export const IntegratedProfile: React.FC = () => {
@@ -55,7 +57,7 @@ export const IntegratedProfile: React.FC = () => {
     );
   }
 
-  const { student, dss, akpd, aum, motivasi, mi, selfEsteem, sosiometri, bullying } = profileData;
+  const { student, dss, akpd, aum, motivasi, mi, selfEsteem, sosiometri, bullying, risikoPerilaku } = profileData;
 
   // Determine Risk Colors
   const isHighRisk = dss.tingkatRisikoGlobal === 'Sangat Tinggi' || dss.tingkatRisikoGlobal === 'Tinggi';
@@ -459,6 +461,198 @@ export const IntegratedProfile: React.FC = () => {
                 </div>
               ) : (
                 <div className="py-4 text-center text-slate-400 text-xs italic font-medium group-hover:text-sky-600 transition-colors">Sosiogram belum bisa digenerate. Perlu partisipasi anggota kelas...</div>
+              )}
+            </div>
+
+            {/* 8. Risiko Perilaku & Kondisi Keluarga (Full Width) */}
+            <div className="md:col-span-2 bg-white rounded-2xl p-5 border border-slate-200 hover:border-orange-300 transition-all shadow-sm group">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 bg-orange-50 text-orange-600 rounded-lg"><ShieldAlert className="w-4 h-4" /></div>
+                  <span className="text-sm font-bold text-slate-800">Skrining Risiko Perilaku & Kondisi Keluarga</span>
+                </div>
+                {!risikoPerilaku && <span className="bg-slate-100 text-slate-400 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Belum Diisi</span>}
+              </div>
+
+              {risikoPerilaku ? (
+                <div className="space-y-4">
+                  {/* Skor Utama: 3 kolom */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Level Risiko Perilaku */}
+                    <div className={`p-3.5 rounded-xl border-2 ${
+                      risikoPerilaku.levelRisikoPerilaku === 'Tinggi'
+                        ? 'bg-rose-50 border-rose-300'
+                        : risikoPerilaku.levelRisikoPerilaku === 'Sedang'
+                        ? 'bg-amber-50 border-amber-300'
+                        : 'bg-emerald-50 border-emerald-200'
+                    }`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Risiko Perilaku</p>
+                      <p className={`text-xl font-black ${
+                        risikoPerilaku.levelRisikoPerilaku === 'Tinggi' ? 'text-rose-700'
+                        : risikoPerilaku.levelRisikoPerilaku === 'Sedang' ? 'text-amber-700'
+                        : 'text-emerald-700'
+                      }`}>{risikoPerilaku.levelRisikoPerilaku}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Skor A: {risikoPerilaku.skorDomainA}/108</p>
+                    </div>
+
+                    {/* Level Kondisi Keluarga */}
+                    <div className={`p-3.5 rounded-xl border-2 ${
+                      risikoPerilaku.levelKondisiKeluarga === 'Sangat Perlu Perhatian'
+                        ? 'bg-rose-50 border-rose-300'
+                        : risikoPerilaku.levelKondisiKeluarga === 'Perlu Perhatian'
+                        ? 'bg-amber-50 border-amber-300'
+                        : 'bg-emerald-50 border-emerald-200'
+                    }`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Kondisi Keluarga</p>
+                      <p className={`text-base font-black leading-tight ${
+                        risikoPerilaku.levelKondisiKeluarga === 'Sangat Perlu Perhatian' ? 'text-rose-700'
+                        : risikoPerilaku.levelKondisiKeluarga === 'Perlu Perhatian' ? 'text-amber-700'
+                        : 'text-emerald-700'
+                      }`}>{risikoPerilaku.levelKondisiKeluarga}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Skor B: {risikoPerilaku.skorDomainB}/42</p>
+                    </div>
+
+                    {/* Validitas & Confidence */}
+                    <div className={`p-3.5 rounded-xl border-2 ${
+                      risikoPerilaku.validitasJawaban === 'Rendah'
+                        ? 'bg-rose-50 border-rose-300'
+                        : risikoPerilaku.validitasJawaban === 'Sedang'
+                        ? 'bg-amber-50 border-amber-300'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Validitas Jawaban</p>
+                      <p className={`text-xl font-black ${
+                        risikoPerilaku.validitasJawaban === 'Rendah' ? 'text-rose-700'
+                        : risikoPerilaku.validitasJawaban === 'Sedang' ? 'text-amber-700'
+                        : 'text-slate-700'
+                      }`}>{risikoPerilaku.validitasJawaban}</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Confidence: <strong>{risikoPerilaku.confidenceScore}%</strong></p>
+                    </div>
+                  </div>
+
+                  {/* Sub-domain Perilaku Bermasalah */}
+                  {risikoPerilaku.subdominPerilaku && risikoPerilaku.subdominPerilaku.length > 0 && (
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl">
+                      <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wider mb-2">Aspek Perilaku Menonjol:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {risikoPerilaku.subdominPerilaku.map((s: string, i: number) => (
+                          <span key={i} className="text-[11px] font-bold bg-orange-100 text-orange-800 px-2.5 py-1 rounded-full border border-orange-200">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ringkasan Otomatis DSS */}
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Ringkasan Skrining DSS:</p>
+                    <p className="text-xs text-slate-700 leading-relaxed italic">&ldquo;{risikoPerilaku.ringkasanOtomatis}&rdquo;</p>
+                  </div>
+
+                  {/* Detail Indikator Bermasalah */}
+                  {risikoPerilaku.detailMasalah && risikoPerilaku.detailMasalah.length > 0 && (
+                    <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl">
+                      <p className="text-[10px] font-bold text-rose-700 uppercase tracking-wider mb-2">Indikator Perlu Perhatian:</p>
+                      <ul className="list-disc list-outside ml-4 text-xs text-rose-900 space-y-1.5 leading-relaxed">
+                        {risikoPerilaku.detailMasalah.map((d: string, i: number) => (
+                          <li key={i} className="pl-0.5">{d}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {risikoPerilaku.validitasJawaban === 'Rendah' && (
+                    <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800 font-medium">Hasil perlu dikonfirmasi. Terdeteksi kemungkinan <em>social desirability</em> dalam pola jawaban siswa.</p>
+                    </div>
+                  )}
+
+                  {/* ── PROFIL SITUASI KELUARGA (Q61-Q68) ── */}
+                  {risikoPerilaku.statusOrangtua && (
+                    <div className="mt-2 rounded-2xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 overflow-hidden">
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-violet-600 text-white">
+                        <div className="flex items-center gap-2">
+                          <HomeIcon className="w-4 h-4" />
+                          <span className="text-sm font-bold tracking-wide">Profil Situasi Keluarga</span>
+                        </div>
+                        {risikoPerilaku.perluHomeVisit && (
+                          <span className="text-[10px] font-black bg-rose-500 text-white px-2.5 py-1 rounded-full animate-pulse tracking-wider">
+                            ⚠ REKOMENDASI HOME VISIT
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-4 space-y-4">
+                        {/* Tags Situasi */}
+                        {risikoPerilaku.labelSituasiKeluarga && risikoPerilaku.labelSituasiKeluarga.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {risikoPerilaku.labelSituasiKeluarga.map((label: string, i: number) => {
+                              const isCritical = ['BROKEN HOME','YATIM PIATU','YATIM / PIATU','KONFLIK KELUARGA','MINIM PENGAWASAN'].includes(label);
+                              const isWarning = ['ORANG TUA TIRI','DIASUH WALI','EKONOMI LEMAH','CERAI (BARU)','DUKA CITA (BARU)','KOS / PANTI'].includes(label);
+                              return (
+                                <span key={i} className={`text-[11px] font-black px-3 py-1.5 rounded-full border tracking-wider ${
+                                  isCritical ? 'bg-rose-600 text-white border-rose-600' :
+                                  isWarning  ? 'bg-amber-500 text-white border-amber-500' :
+                                               'bg-violet-100 text-violet-800 border-violet-300'
+                                }`}>{label}</span>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Grid 4 Fakta Utama */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="bg-white rounded-xl p-3 border border-violet-100 shadow-sm">
+                            <p className="text-[9px] font-bold text-violet-500 uppercase tracking-wider mb-1">Status Ortu</p>
+                            <p className="text-[11px] font-black text-slate-800 leading-tight">{risikoPerilaku.statusOrangtua}</p>
+                          </div>
+                          <div className="bg-white rounded-xl p-3 border border-violet-100 shadow-sm">
+                            <p className="text-[9px] font-bold text-violet-500 uppercase tracking-wider mb-1">Diasuh Oleh</p>
+                            <p className="text-[11px] font-black text-slate-800 leading-tight">{risikoPerilaku.figurPengasuh}</p>
+                          </div>
+                          <div className="bg-white rounded-xl p-3 border border-violet-100 shadow-sm">
+                            <p className="text-[9px] font-bold text-violet-500 uppercase tracking-wider mb-1">Tempat Tinggal</p>
+                            <p className="text-[11px] font-black text-slate-800 leading-tight">{risikoPerilaku.tempatTinggal}</p>
+                          </div>
+                          <div className={`rounded-xl p-3 border shadow-sm ${
+                            risikoPerilaku.kondisiEkonomi === 'Kekurangan' ? 'bg-rose-50 border-rose-200' :
+                            risikoPerilaku.kondisiEkonomi === 'Pas-pasan'  ? 'bg-amber-50 border-amber-200' :
+                                                                             'bg-emerald-50 border-emerald-200'
+                          }`}>
+                            <p className="text-[9px] font-bold text-violet-500 uppercase tracking-wider mb-1">Ekonomi</p>
+                            <p className={`text-[11px] font-black leading-tight ${
+                              risikoPerilaku.kondisiEkonomi === 'Kekurangan' ? 'text-rose-700' :
+                              risikoPerilaku.kondisiEkonomi === 'Pas-pasan'  ? 'text-amber-700' :
+                                                                               'text-emerald-700'
+                            }`}>{risikoPerilaku.kondisiEkonomi}</p>
+                          </div>
+                        </div>
+
+                        {/* Level Dukungan & Ringkasan */}
+                        <div className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                          risikoPerilaku.levelSituasiKeluarga === 'Sangat Perlu Perhatian' ? 'bg-rose-50 border-rose-200' :
+                          risikoPerilaku.levelSituasiKeluarga === 'Perlu Perhatian'        ? 'bg-amber-50 border-amber-200' :
+                                                                                             'bg-emerald-50 border-emerald-200'
+                        }`}>
+                          <div className="shrink-0 mt-0.5">
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                              risikoPerilaku.levelSituasiKeluarga === 'Sangat Perlu Perhatian' ? 'bg-rose-600 text-white' :
+                              risikoPerilaku.levelSituasiKeluarga === 'Perlu Perhatian'        ? 'bg-amber-500 text-white' :
+                                                                                                 'bg-emerald-600 text-white'
+                            }`}>{risikoPerilaku.levelSituasiKeluarga}</span>
+                          </div>
+                          <p className="text-xs text-slate-700 leading-relaxed italic">{risikoPerilaku.ringkasanSituasiKeluarga}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ) : (
+                <div className="py-4 text-center text-slate-400 text-xs italic font-medium group-hover:text-orange-600 transition-colors">Menunggu siswa mengerjakan asesmen ini...</div>
               )}
             </div>
 

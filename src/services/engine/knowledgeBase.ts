@@ -4,7 +4,7 @@
 // Matriks inferensi dan pengetahuan dasar layanan Bimbingan Konseling (POP BK)
 
 export interface ServiceRecommendation {
-  jenisLayanan: 'Bimbingan Klasikal' | 'Bimbingan Kelompok' | 'Konseling Individual' | 'Referal / Alih Tangan';
+  jenisLayanan: 'Bimbingan Klasikal' | 'Bimbingan Kelompok' | 'Konseling Individual' | 'Referal / Alih Tangan' | 'Kunjungan Rumah (Home Visit)';
   prioritas: 'Sangat Tinggi' | 'Tinggi' | 'Sedang' | 'Rendah';
   topikLayanan: string;
   tujuanLayanan: string;

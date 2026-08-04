@@ -9,6 +9,7 @@ import {
   SelfEsteemResult,
   SociometricResult,
   MIResult,
+  RisikoPerilakuResult,
 } from './ruleEngine';
 import { ServiceRecommendation, RiskAlert, getRecommendedTopics } from './knowledgeBase';
 
@@ -30,7 +31,8 @@ export function generateDSSAnalysis(
   motivasi?: MotivasiResult,
   selfEsteem?: SelfEsteemResult,
   sosiometri?: SociometricResult,
-  mi?: MIResult
+  mi?: MIResult,
+  risikoPerilaku?: RisikoPerilakuResult
 ): DSSIntegratedAnalysis {
   const riskAlerts: RiskAlert[] = [];
   const layananRekomendasi: ServiceRecommendation[] = [];
@@ -147,6 +149,80 @@ export function generateDSSAnalysis(
   // 6. Analisis Multiple Intelligence
   if (mi && mi.topDomains.length > 0) {
     faktorPendukung.push(`Dominan Kecerdasan: ${mi.topDomains.join(', ')}`);
+  }
+
+  // 7. Analisis Risiko Perilaku & Kondisi Keluarga
+  if (risikoPerilaku) {
+    // — Risiko Perilaku —
+    if (risikoPerilaku.levelRisikoPerilaku === 'Tinggi') {
+      globalRiskScore += 45;
+      riskAlerts.push({
+        level: 'Merah (Tinggi)',
+        kategori: 'Risiko Perilaku',
+        deskripsi: 'Terdeteksi indikasi RISIKO PERILAKU TINGGI. Siswa memerlukan perhatian khusus dan tindak lanjut segera dari Guru BK.',
+      });
+      layananRekomendasi.push({
+        jenisLayanan: 'Konseling Individual',
+        prioritas: 'Sangat Tinggi',
+        topikLayanan: `Penguatan Kontrol Diri & Pengambilan Keputusan${risikoPerilaku.subdominPerilaku.length > 0 ? ' (' + risikoPerilaku.subdominPerilaku[0] + ')' : ''}`,
+        tujuanLayanan: 'Membantu siswa mengenali pemicu perilaku berisiko dan membangun strategi regulasi diri',
+      });
+      faktorRisiko.push(`Teridentifikasi kecenderungan perilaku berisiko${risikoPerilaku.subdominPerilaku.length > 0 ? ': ' + risikoPerilaku.subdominPerilaku.join(', ') : ' (impulsivitas, pengaruh teman, kontrol diri rendah)'}`);
+      targetMonitoring.push('Pantau kehadiran, pelanggaran tata tertib, dan interaksi sosial siswa secara rutin');
+    } else if (risikoPerilaku.levelRisikoPerilaku === 'Sedang') {
+      globalRiskScore += 20;
+      riskAlerts.push({
+        level: 'Kuning (Sedang)',
+        kategori: 'Risiko Perilaku',
+        deskripsi: 'Siswa menunjukkan beberapa indikator perilaku yang perlu dipantau dan diarahkan.',
+      });
+      layananRekomendasi.push({
+        jenisLayanan: 'Bimbingan Kelompok',
+        prioritas: 'Tinggi',
+        topikLayanan: 'Pengambilan Keputusan Bijak & Resistensi Tekanan Teman Sebaya',
+        tujuanLayanan: 'Membangun kemampuan menolak ajakan negatif dan berpikir kritis sebelum bertindak',
+      });
+    } else {
+      faktorPendukung.push('Perilaku siswa tampak terkendali dan sesuai norma yang berlaku');
+    }
+
+    // — Kondisi Keluarga —
+    if (risikoPerilaku.levelKondisiKeluarga === 'Sangat Perlu Perhatian') {
+      globalRiskScore += 20;
+      riskAlerts.push({
+        level: 'Kuning (Sedang)',
+        kategori: 'Kondisi Keluarga',
+        deskripsi: 'Dukungan dan stabilitas lingkungan keluarga siswa perlu mendapat perhatian lebih lanjut melalui konfirmasi.',
+      });
+      layananRekomendasi.push({
+        jenisLayanan: 'Referal / Alih Tangan',
+        prioritas: 'Tinggi',
+        topikLayanan: 'Koordinasi dengan Orang Tua/Wali & Wali Kelas',
+        tujuanLayanan: 'Membangun komunikasi dan dukungan dari lingkungan keluarga siswa',
+      });
+      layananRekomendasi.push({
+        jenisLayanan: 'Kunjungan Rumah (Home Visit)',
+        prioritas: 'Sedang',
+        topikLayanan: 'Asesmen Kondisi Keluarga & Lingkungan Tinggal',
+        tujuanLayanan: 'Mengkonfirmasi kondisi aktual dan membangun relasi dengan keluarga siswa',
+      });
+      faktorRisiko.push('Dukungan dan stabilitas keluarga tampak kurang optimal (perlu konfirmasi melalui wawancara/home visit)');
+      targetMonitoring.push('Lakukan komunikasi dengan orang tua/wali atau home visit dalam waktu dekat');
+    } else if (risikoPerilaku.levelKondisiKeluarga === 'Perlu Perhatian') {
+      layananRekomendasi.push({
+        jenisLayanan: 'Konseling Individual',
+        prioritas: 'Sedang',
+        topikLayanan: 'Eksplorasi Kondisi dan Dukungan Keluarga',
+        tujuanLayanan: 'Memahami dinamika keluarga siswa dan mengidentifikasi faktor pelindung',
+      });
+    } else {
+      faktorPendukung.push('Dukungan lingkungan keluarga tampak memadai dan positif');
+    }
+
+    // — Catatan Validitas —
+    if (risikoPerilaku.validitasJawaban === 'Rendah') {
+      targetMonitoring.push('Perlu konfirmasi ulang hasil asesmen melalui observasi/wawancara (terdeteksi kemungkinan social desirability dalam jawaban)');
+    }
   }
 
   // Tentukan tingkat risiko global

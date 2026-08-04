@@ -169,7 +169,7 @@ export const TakeAssessment: React.FC<TakeAssessmentProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <div className={`grid gap-2 pt-1 ${q.pilihan.length === 5 ? 'grid-cols-1 sm:grid-cols-5' : q.pilihan.length === 3 ? 'grid-cols-3' : q.pilihan.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'}`}>
                   {q.pilihan.map((opt) => {
                     const isSelected = answers[q.id] === opt.value;
                     return (
