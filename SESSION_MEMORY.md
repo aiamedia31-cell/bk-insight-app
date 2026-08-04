@@ -1,7 +1,7 @@
-﻿# 🧠 SESSION MEMORY — BK Insight Project
+# 🧠 SESSION MEMORY — BK Insight Project
 > **BACA FILE INI PERTAMA KALI DI SETIAP SESI BARU.**
 > Ini adalah dokumen memori persisten yang merangkum keseluruhan project, riwayat keputusan, aturan mutlak, status perkembangan, dan arsitektur teknis terkini.
-> *Terakhir diperbarui: 4 Agustus 2026*
+> *Terakhir diperbarui: 4 Agustus 2026 — Sesi 3*
 
 ---
 
@@ -207,6 +207,7 @@ motivasi            - Motivasi Belajar
 self_esteem         - Self-Esteem (RSES)
 sosiometri          - Sosiometri
 multiple_intelligence - Multiple Intelligence (Gardner)
+risiko_perilaku     - Skrining Risiko Perilaku & Profil Situasi Keluarga (68 soal)
 ```
 Assessment ID di UI menggunakan prefix 'asm_' (contoh: 'asm_akpd_7')
 
@@ -225,6 +226,9 @@ Assessment ID di UI menggunakan prefix 'asm_' (contoh: 'asm_akpd_7')
 | calculateSelfEsteem(responses) | SelfEsteemResult |
 | calculateSociometry(targetId, totalClass, allChoices) | SociometricResult |
 | calculateMI(responses) | MIResult |
+| calculateRisikoPerilaku(responses) | RisikoPerilakuResult |
+
+> **calculateRisikoPerilaku** memproses Q1-Q60 (Likert 1-3) + memanggil `calculateProfilKeluargaEmbedded` untuk Q61-Q68 (pilihan ganda faktual). Output gabungan.
 
 **Catatan Scoring Penting:**
 - AKPD: skor 1 = butuh layanan BK, 0 = tidak butuh
@@ -298,6 +302,13 @@ TOPIC_KNOWLEDGE_MATRIX:
 12. Ekspor Excel rekap kelas (fungsi ada, belum ada tombol di UI)
 13. Database Schema lengkap (12 tabel + RLS + SQL migrations)
 14. Seed Data (7 instrumen + 40 soal AKPD + 40 soal AUM + dll)
+15. **[BARU]** Instrumen ke-8: Risiko Perilaku & Profil Situasi Keluarga (68 soal total)
+    - 60 soal Likert 1-3 (Domain A, B, Validitas)
+    - 8 soal faktual Q61-Q68 (broken home, yatim piatu, ortu tiri, ekonomi, pengawasan)
+    - Rule Engine: calculateRisikoPerilaku + calculateProfilKeluargaEmbedded
+    - Dashboard guru: Kartu orange (Likert) + Kartu ungu (Profil Keluarga)
+    - Tag badges: BROKEN HOME, YATIM PIATU, ORANG TUA TIRI, EKONOMI LEMAH, dll
+    - Flag: perluHomeVisit (auto-trigger jika riskScore ≥ 8 atau yatim piatu)
 
 ### BELUM SELESAI (TODO):
 
@@ -438,3 +449,33 @@ VITE_SUPABASE_ANON_KEY=[anon-key]
 - UI: Kartu ke-8 aksen Orange + 3 skor + sub-domain menonjol + ringkasan otomatis DSS
 - Fitur Validitas: Confidence Score 0-100 + deteksi social desirability (faking good)
 - ID instrumen di DB: 'risiko_perilaku'
+
+**[4 Agustus 2026 — Sesi 3]**
+- Diubah: Skala instrumen ke-8 dari Likert 1-5 → **Likert 1-3** (Tidak Pernah / Kadang-kadang / Sering)
+  - Alasan: Lebih ramah kognitif untuk siswa SMP 3T, tetap diskriminatif untuk screening
+  - Threshold dikalibrasi ulang: Domain A (<55 Rendah, 55-72 Sedang, ≥73 Tinggi, range 36-108)
+  - Reverse scoring: 6-val → 4-val; default dari 5 → 3
+  - Confidence score divisor: 40 → 20
+- Ditambahkan: **8 soal Profil Situasi Keluarga (Q61-Q68)** disematkan di instrumen ke-8
+  - Format: pilihan ganda faktual (single-select, BUKAN Likert), bidang='Profil Keluarga'
+  - Q61: status ortu | Q62: tinggal bersama | Q63: hubungan pengasuh | Q64: konflik rumah
+  - Q65: ekonomi | Q66: perubahan besar | Q67: tempat tinggal | Q68: pengawasan
+  - Total instrumen ke-8: 68 soal
+- Ditambahkan: calculateProfilKeluargaEmbedded() dalam ruleEngine.ts
+  - Auto-tag: BROKEN HOME, YATIM PIATU, YATIM / PIATU, ORANG TUA TIRI, DIASUH WALI
+  - Auto-tag: EKONOMI LEMAH, KOS / PANTI, CERAI (BARU), MINIM PENGAWASAN, dll
+  - levelSituasiKeluarga: Baik / Perlu Perhatian / Sangat Perlu Perhatian
+  - perluHomeVisit: true jika riskScore ≥ 8 atau yatim piatu atau (minim pengawasan + broken home)
+- Ditambahkan: Kartu visual Profil Keluarga di IntegratedProfile.tsx
+  - Header ungu gelap + banner ⚠ REKOMENDASI HOME VISIT (pulse animation)
+  - Badge tags berwarna: merah (kritis), amber (perhatian), ungu (info)
+  - Grid 4 fakta: Status Ortu | Diasuh Oleh | Tempat Tinggal | Ekonomi (warna adaptif)
+  - Ringkasan + level badge berwarna
+- SQL: 03_seed_risiko_perilaku.sql diperbarui (68 soal, Likert 1-3)
+- Git: commit + push ke origin main (commit hash: 7dee26a)
+- TypeScript: 100% clean (npx tsc --noEmit = exit code 0)
+
+### ⚠️ Catatan Penting Skala Likert 1-3
+Instrumen ke-8 (risiko_perilaku) menggunakan **Likert 1-3**, bukan 1-5 atau 1-4 seperti instrumen lain.
+Jangan ubah ke 1-5 lagi — ini keputusan final berdasarkan pertimbangan konteks 3T.
+Jika ada instrumen baru yang butuh Likert, gunakan 1-3 sebagai standar untuk siswa SMP 3T.
