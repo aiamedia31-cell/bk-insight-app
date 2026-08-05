@@ -684,7 +684,6 @@ export class DataService {
         if (motivasiRes && (['Rendah', 'Sangat Rendah'] as string[]).includes(motivasiRes.tingkatMotivasi as string)) flags.push('Motivasi Rendah');
         if (selfEsteemRes?.tingkat === 'Rendah') flags.push('Self-Esteem Rendah');
         if (risikoPerilakuRes?.levelRisikoPerilaku === 'Tinggi') flags.push('Risiko Perilaku Tinggi');
-        if (akpdRes?.prioritasUtama) flags.push(`AKPD: ${akpdRes.prioritasUtama}`);
         const kondisiKeluargaLabels = risikoPerilakuRes?.labelSituasiKeluarga || [];
 
         const hasSociometri = mappedChoices.some(c => c.studentId === student.id);
