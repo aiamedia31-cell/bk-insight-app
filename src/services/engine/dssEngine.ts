@@ -41,6 +41,22 @@ export function generateDSSAnalysis(
   const faktorRisiko: string[] = [];
   const targetMonitoring: string[] = [];
 
+  // ── Guard: jika TIDAK ADA asesmen yang diisi sama sekali ──────────────────
+  // Kembalikan "Rendah" agar siswa tidak dihukum dengan skor risiko tanpa data.
+  const adaData = akpd || aum || bullying || motivasi || selfEsteem || sosiometri || mi || risikoPerilaku;
+  if (!adaData) {
+    return {
+      ringkasanStatus: 'Siswa belum mengisi asesmen apapun. Tidak dapat menentukan profil risiko.',
+      tingkatRisikoGlobal: 'Rendah',
+      riskAlerts: [],
+      layananRekomendasi: [],
+      prioritasMasalah: ['Belum ada data asesmen yang dapat dianalisis'],
+      faktorPendukung: [],
+      faktorRisiko: [],
+      targetMonitoring: ['Dorong siswa untuk mengisi asesmen yang tersedia'],
+    };
+  }
+
   let globalRiskScore = 0; // 0 - 100
 
   // 1. Analisis AKPD

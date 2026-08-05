@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DataService } from '../../services/dataService';
 import { exportIntegratedProfilePDF } from '../../services/reportGenerator';
 import {
@@ -13,102 +13,301 @@ import {
   Target,
   BrainCircuit,
   Activity,
-  CheckCircle2,
   Calendar,
   User as UserIcon,
   RotateCcw,
   ShieldAlert,
-  Home as HomeIcon
+  Home as HomeIcon,
+  Search,
 } from 'lucide-react';
 
-export const IntegratedProfile: React.FC = () => {
+// ── Radar Chart SVG ─────────────────────────────────────────────────────────
+interface RadarAxis {
+  label: string;
+  value: number; // 0–100
+  color: string;
+}
+
+const RadarChart: React.FC<{ axes: RadarAxis[]; size?: number }> = ({ axes, size = 220 }) => {
+  const cx = size / 2;
+  const cy = size / 2;
+  const R = size / 2 - 28;
+  const n = axes.length;
+
+  // Polygon points helper
+  const getPoint = (angleDeg: number, r: number) => {
+    const rad = (angleDeg - 90) * (Math.PI / 180);
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  };
+
+  const angles = axes.map((_, i) => (360 / n) * i);
+
+  // Background rings at 25%, 50%, 75%, 100%
+  const rings = [0.25, 0.5, 0.75, 1].map((pct) =>
+    angles.map((a) => getPoint(a, R * pct))
+  );
+
+  const toPath = (pts: { x: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ' Z';
+
+  // Actual data polygon
+  const dataPoints = axes.map((axis, i) => getPoint(angles[i], R * (axis.value / 100)));
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-sm">
+      {/* Background rings */}
+      {rings.map((pts, ri) => (
+        <path
+          key={ri}
+          d={toPath(pts)}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth={ri === 3 ? 1.5 : 1}
+          strokeDasharray={ri < 3 ? '3,3' : undefined}
+        />
+      ))}
+
+      {/* Axis lines */}
+      {angles.map((angle, i) => {
+        const outer = getPoint(angle, R);
+        return <line key={i} x1={cx} y1={cy} x2={outer.x} y2={outer.y} stroke="#e2e8f0" strokeWidth={1} />;
+      })}
+
+      {/* Filled polygon */}
+      <path d={toPath(dataPoints)} fill="rgba(16,185,129,0.18)" stroke="#10b981" strokeWidth={2} />
+
+      {/* Data dots */}
+      {dataPoints.map((pt, i) => (
+        <circle key={i} cx={pt.x} cy={pt.y} r={3.5} fill="#10b981" stroke="white" strokeWidth={1.5} />
+      ))}
+
+      {/* Labels */}
+      {axes.map((axis, i) => {
+        const labelPt = getPoint(angles[i], R + 16);
+        const textAnchor =
+          labelPt.x < cx - 4 ? 'end' : labelPt.x > cx + 4 ? 'start' : 'middle';
+        return (
+          <text
+            key={i}
+            x={labelPt.x}
+            y={labelPt.y}
+            textAnchor={textAnchor}
+            dominantBaseline="middle"
+            fontSize={7.5}
+            fontWeight={700}
+            fill={axis.value >= 70 ? '#10b981' : axis.value >= 40 ? '#f59e0b' : '#ef4444'}
+          >
+            {axis.label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+};
+
+interface IntegratedProfileProps {
+  initialStudentId?: string;
+  initialKelasId?: string;
+  onStudentIdConsumed?: () => void;
+}
+
+export const IntegratedProfile: React.FC<IntegratedProfileProps> = ({
+  initialStudentId,
+  initialKelasId,
+  onStudentIdConsumed,
+}) => {
   const [students, setStudents] = useState<any[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [classes, setClasses] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(() => initialStudentId || '');
+  const [filterKelas, setFilterKelas] = useState<string>('all');
   const [profileData, setProfileData] = useState<any>(null);
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    DataService.getClasses().then(setClasses);
+  }, []);
 
   useEffect(() => {
     DataService.getStudents().then((res) => {
       setStudents(res);
-      if (res.length > 0 && !selectedStudentId) {
-        setSelectedStudentId(res[0].id);
-      }
+      setSelectedStudentId((prev) => prev || (res.length > 0 ? res[0].id : ''));
     });
   }, []);
 
   useEffect(() => {
-    if (!selectedStudentId) {
-      setProfileData(null);
-      return;
+    if (initialStudentId) {
+      setSelectedStudentId(initialStudentId);
+      // Auto-set filter kelas ke kelas siswa agar dropdown sudah terfilter
+      if (initialKelasId) setFilterKelas(initialKelasId);
+      onStudentIdConsumed?.();
     }
-    DataService.getIntegratedStudentProfile(selectedStudentId).then(setProfileData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialStudentId]);
+
+  useEffect(() => {
+    if (!selectedStudentId) { setProfileData(null); return; }
+    setProfileData(null);
+    let cancelled = false;
+    DataService.getIntegratedStudentProfile(selectedStudentId).then((data) => {
+      if (!cancelled) setProfileData(data);
+    });
+    return () => { cancelled = true; };
   }, [selectedStudentId]);
+
+  // Filter kelas change — auto-select first student of new class
+  const handleFilterKelasChange = (kelasId: string) => {
+    setFilterKelas(kelasId);
+    const studentsInClass = kelasId === 'all' ? students : students.filter(s => s.kelas_id === kelasId);
+    if (studentsInClass.length > 0) {
+      setSelectedStudentId(studentsInClass[0].id);
+    }
+  };
+
+  const filteredStudents = filterKelas === 'all'
+    ? students
+    : students.filter((s) => s.kelas_id === filterKelas);
+
+  const selectedStudent = students.find((s) => s.id === selectedStudentId);
+
+  // Compute radar axes (normalized 0-100)
+  // Use 0 (not 50) for instruments that haven't been filled yet — avoids misleading "average" display
+  const computeRadarAxes = (pd: any): RadarAxis[] => {
+    if (!pd) return [];
+    const { akpd, aum, bullying, selfEsteem, motivasi, mi, risikoPerilaku } = pd;
+    const aumScore = !aum ? 0 : aum.tingkatMasalah === 'Rendah' ? 85 : aum.tingkatMasalah === 'Sedang' ? 55 : 20;
+    const bullyingScore = !bullying ? 0 : bullying.peran === 'Aman' ? 90 : bullying.peran === 'Korban Ringan' ? 45 : 15;
+    const selfEsteemScore = !selfEsteem ? 0 : selfEsteem.tingkat === 'Tinggi' ? 85 : selfEsteem.tingkat === 'Sedang' ? 55 : 20;
+    const motivasiScore = !motivasi ? 0 : motivasi.tingkatMotivasi === 'Sangat Tinggi' ? 95 : motivasi.tingkatMotivasi === 'Tinggi' ? 80 : motivasi.tingkatMotivasi === 'Sedang' ? 55 : motivasi.tingkatMotivasi === 'Rendah' ? 30 : 10;
+    const miScore = mi ? Math.min(95, 60 + (mi.topDomains?.length || 0) * 10) : 0;
+    const akpdScore = !akpd ? 0 : Math.max(10, 100 - Math.max(akpd.pribadi, akpd.sosial, akpd.belajar, akpd.karier));
+    const risikoScore = !risikoPerilaku ? 0 : risikoPerilaku.levelRisikoPerilaku === 'Rendah' ? 85 : risikoPerilaku.levelRisikoPerilaku === 'Sedang' ? 55 : 20;
+    return [
+      { label: 'AUM', value: aumScore, color: '#f59e0b' },
+      { label: 'Motivasi', value: motivasiScore, color: '#6366f1' },
+      { label: 'Self-Esteem', value: selfEsteemScore, color: '#ec4899' },
+      { label: 'Bullying', value: bullyingScore, color: '#ef4444' },
+      { label: 'Risiko\nPerilaku', value: risikoScore, color: '#f97316' },
+      { label: 'Kog. Majemuk', value: miScore, color: '#8b5cf6' },
+      { label: 'AKPD', value: akpdScore, color: '#10b981' },
+    ];
+  };
 
   if (!profileData) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200 border-dashed">
-        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
-          <Users className="w-8 h-8" />
+      <div className="space-y-6">
+        {/* Toolbar — loading state */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+          {/* Row 1: Filter kelas */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">Filter Kelas:</span>
+            <button onClick={() => handleFilterKelasChange('all')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${filterKelas === 'all' ? 'bg-emerald-600 text-white shadow-sm scale-105' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Semua</button>
+            {classes.map((cls: any) => (
+              <button key={cls.id} onClick={() => handleFilterKelasChange(cls.id)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${filterKelas === cls.id ? 'bg-emerald-600 text-white shadow-sm scale-105' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{cls.nama}</button>
+            ))}
+          </div>
+          {/* Row 2: Pilih siswa */}
+          <div className="flex items-center space-x-3 w-full">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">Pilih Siswa:</span>
+            <div className="relative flex-1 max-w-sm">
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-emerald-400 transition-colors" onClick={() => setShowDropdown((v) => !v)}>
+                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="text-sm font-semibold text-slate-500 truncate flex-1">{selectedStudent ? `${selectedStudent.nama} (${selectedStudent.kelas_nama})` : 'Pilih siswa...'}</span>
+              </div>
+              {showDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  <div className="max-h-72 overflow-y-auto">
+                    {filteredStudents.length > 0 ? filteredStudents.map((s: any) => (
+                      <div key={s.id} onClick={() => { setSelectedStudentId(s.id); setShowDropdown(false); }} className="px-4 py-2.5 cursor-pointer hover:bg-emerald-50 transition-colors flex items-center gap-3 text-slate-800">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-300 flex items-center justify-center text-white text-xs font-black shrink-0">{s.nama.charAt(0)}</div>
+                        <div>
+                          <p className="text-sm font-semibold">{s.nama}</p>
+                          <p className="text-[10px] text-slate-400">Kelas {s.kelas_nama}</p>
+                        </div>
+                      </div>
+                    )) : <div className="px-4 py-6 text-center text-xs text-slate-400 italic">Tidak ada siswa</div>}
+                  </div>
+                </div>
+              )}
+              {showDropdown && <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />}
+            </div>
+          </div>
         </div>
-        <h3 className="text-lg font-bold text-slate-900">Belum Ada Data Terpilih</h3>
-        <p className="text-sm text-slate-500 mt-1 text-center max-w-sm">
-          Silakan impor data siswa di menu Master Data, atau pilih siswa dari *dropdown* di atas untuk melihat Profil BK Terpadu.
-        </p>
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200 border-dashed">
+          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm font-semibold text-slate-500">Memuat profil siswa...</p>
+        </div>
       </div>
     );
   }
 
   const { student, dss, akpd, aum, motivasi, mi, selfEsteem, sosiometri, bullying, risikoPerilaku } = profileData;
+  const radarAxes = computeRadarAxes(profileData);
 
   // Determine Risk Colors
-  const isHighRisk = dss.tingkatRisikoGlobal === 'Sangat Tinggi' || dss.tingkatRisikoGlobal === 'Tinggi';
+  const isSangatTinggi = dss.tingkatRisikoGlobal === 'Sangat Tinggi';
+  const isTinggi = dss.tingkatRisikoGlobal === 'Tinggi';
+  const isHighRisk = isSangatTinggi || isTinggi; // untuk backward compat (alert, dll)
   const isMedRisk = dss.tingkatRisikoGlobal === 'Sedang';
 
   return (
     <div className="space-y-6">
       
       {/* Top Navigation / Toolbar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center space-x-3 w-full sm:w-auto">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">Pilih Siswa:</span>
-          <select
-            value={selectedStudentId}
-            onChange={(e) => setSelectedStudentId(e.target.value)}
-            className="w-full sm:w-72 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
-          >
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nama} ({s.kelas_nama})
-              </option>
-            ))}
-          </select>
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+        {/* Row 1: Filter kelas */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider shrink-0">Filter Kelas:</span>
+          <button onClick={() => handleFilterKelasChange('all')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${filterKelas === 'all' ? 'bg-emerald-600 text-white shadow-sm scale-105' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Semua</button>
+          {classes.map((cls: any) => (
+            <button key={cls.id} onClick={() => handleFilterKelasChange(cls.id)} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${filterKelas === cls.id ? 'bg-emerald-600 text-white shadow-sm scale-105' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{cls.nama}</button>
+          ))}
         </div>
+        {/* Row 2: Pilih siswa + aksi */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">Pilih Siswa:</span>
+            <div className="relative flex-1 sm:w-80" ref={searchRef as any}>
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-emerald-400 transition-colors" onClick={() => setShowDropdown((v) => !v)}>
+                <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="text-sm font-semibold text-slate-900 truncate flex-1">{selectedStudent ? `${selectedStudent.nama} (${selectedStudent.kelas_nama})` : 'Pilih siswa...'}</span>
+              </div>
+              {showDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  <div className="max-h-72 overflow-y-auto">
+                    {filteredStudents.length > 0 ? filteredStudents.map((s) => (
+                      <div key={s.id} onClick={() => { setSelectedStudentId(s.id); setShowDropdown(false); }} className={`px-4 py-2.5 cursor-pointer hover:bg-emerald-50 transition-colors flex items-center gap-3 ${s.id === selectedStudentId ? 'bg-emerald-50 text-emerald-700' : 'text-slate-800'}`}>
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-300 flex items-center justify-center text-white text-xs font-black shrink-0">{s.nama.charAt(0)}</div>
+                        <div>
+                          <p className="text-sm font-semibold">{s.nama}</p>
+                          <p className="text-[10px] text-slate-400">Kelas {s.kelas_nama}</p>
+                        </div>
+                      </div>
+                    )) : <div className="px-4 py-6 text-center text-xs text-slate-400 italic">Tidak ada siswa</div>}
+                  </div>
+                </div>
+              )}
+              {showDropdown && <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />}
+            </div>
+          </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <button
-            onClick={async () => {
-              if (window.confirm(`Yakin ingin MENGHAPUS SELURUH JAWABAN ASESMEN untuk ${student.nama}? Data yang dihapus tidak dapat dikembalikan.`)) {
-                const success = await DataService.resetStudentResponses(student.id);
-                if (success) {
-                  alert('Data jawaban berhasil dikosongkan!');
-                  window.location.reload();
-                } else {
-                  alert('Gagal mengosongkan data. Silakan coba lagi.');
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <button
+              onClick={async () => {
+                if (window.confirm(`Yakin ingin MENGHAPUS SELURUH JAWABAN ASESMEN untuk ${profileData.student.nama}? Data yang dihapus tidak dapat dikembalikan.`)) {
+                  const success = await DataService.resetStudentResponses(profileData.student.id);
+                  if (success) { alert('Data jawaban berhasil dikosongkan!'); window.location.reload(); }
+                  else { alert('Gagal mengosongkan data. Silakan coba lagi.'); }
                 }
-              }
-            }}
-            className="w-full sm:w-auto py-2.5 px-4 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold rounded-xl text-sm flex items-center justify-center space-x-2 transition-all shadow-sm"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Reset Jawaban</span>
-          </button>
-          
-          <button
-            onClick={() => exportIntegratedProfilePDF(student.id)}
-            className="w-full sm:w-auto py-2.5 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm flex items-center justify-center space-x-2 transition-all shadow-md shadow-emerald-600/20"
-          >
-            <Download className="w-4 h-4" />
-            <span>Cetak Laporan PDF</span>
-          </button>
+              }}
+              className="w-full sm:w-auto py-2.5 px-4 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 font-bold rounded-xl text-sm flex items-center justify-center space-x-2 transition-all shadow-sm"
+            >
+              <RotateCcw className="w-4 h-4" /><span>Reset Jawaban</span>
+            </button>
+            <button onClick={() => exportIntegratedProfilePDF(profileData.student.id)} className="w-full sm:w-auto py-2.5 px-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm flex items-center justify-center space-x-2 transition-all shadow-md shadow-emerald-600/20">
+              <Download className="w-4 h-4" /><span>Cetak Laporan PDF</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -156,21 +355,29 @@ export const IntegratedProfile: React.FC = () => {
 
           {/* 2. Global Risk Status */}
           <div className={`rounded-3xl p-6 border shadow-sm flex items-start space-x-4 ${
-            isHighRisk 
-              ? 'bg-rose-50 border-rose-200 shadow-rose-100' 
-              : isMedRisk 
-              ? 'bg-amber-50 border-amber-200 shadow-amber-100' 
+            isSangatTinggi
+              ? 'bg-rose-50 border-rose-200 shadow-rose-100'
+              : isTinggi
+              ? 'bg-orange-50 border-orange-200 shadow-orange-100'
+              : isMedRisk
+              ? 'bg-amber-50 border-amber-200 shadow-amber-100'
               : 'bg-emerald-50 border-emerald-200 shadow-emerald-100'
           }`}>
             <div className={`p-3 rounded-2xl shrink-0 ${
-              isHighRisk ? 'bg-rose-100 text-rose-600' : isMedRisk ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+              isSangatTinggi ? 'bg-rose-100 text-rose-600'
+              : isTinggi ? 'bg-orange-100 text-orange-600'
+              : isMedRisk ? 'bg-amber-100 text-amber-600'
+              : 'bg-emerald-100 text-emerald-600'
             }`}>
-              {isHighRisk ? <AlertTriangle className="w-6 h-6" /> : isMedRisk ? <Activity className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+              {isSangatTinggi ? <AlertTriangle className="w-6 h-6" /> : isTinggi ? <AlertTriangle className="w-6 h-6" /> : isMedRisk ? <Activity className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Status Risiko Global DSS</p>
               <h3 className={`text-2xl font-black ${
-                isHighRisk ? 'text-rose-700' : isMedRisk ? 'text-amber-700' : 'text-emerald-700'
+                isSangatTinggi ? 'text-rose-700'
+                : isTinggi ? 'text-orange-700'
+                : isMedRisk ? 'text-amber-700'
+                : 'text-emerald-700'
               }`}>
                 {dss.tingkatRisikoGlobal}
               </h3>
@@ -206,6 +413,29 @@ export const IntegratedProfile: React.FC = () => {
             ) : (
               <p className="text-sm text-slate-500 text-center py-4 italic">Belum ada rekomendasi. Data asesmen belum mencukupi.</p>
             )}
+          </div>
+
+          {/* 4. Radar Chart */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <Activity className="w-4 h-4" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Profil Radar Asesmen</h3>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium mb-4">Skala 0–100 (semakin besar = semakin baik)</p>
+            <div className="flex justify-center">
+              <RadarChart axes={radarAxes} size={220} />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-1.5">
+              {radarAxes.map((axis) => (
+                <div key={axis.label.replace('\n', ' ')} className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: axis.color }} />
+                  <span className="text-[10px] text-slate-500 font-medium">{axis.label.replace('\n', ' ')}</span>
+                  <span className="text-[10px] font-black text-slate-700 ml-auto">{axis.value}%</span>
+                </div>
+              ))}
+            </div>
           </div>
 
         </div>

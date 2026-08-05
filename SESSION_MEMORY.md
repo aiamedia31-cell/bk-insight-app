@@ -1,7 +1,7 @@
 # 🧠 SESSION MEMORY — BK Insight Project
 > **BACA FILE INI PERTAMA KALI DI SETIAP SESI BARU.**
 > Ini adalah dokumen memori persisten yang merangkum keseluruhan project, riwayat keputusan, aturan mutlak, status perkembangan, dan arsitektur teknis terkini.
-> *Terakhir diperbarui: 4 Agustus 2026 — Sesi 3*
+> *Terakhir diperbarui: 4 Agustus 2026 — Sesi 4 (lanjutan)*
 
 ---
 
@@ -479,3 +479,114 @@ VITE_SUPABASE_ANON_KEY=[anon-key]
 Instrumen ke-8 (risiko_perilaku) menggunakan **Likert 1-3**, bukan 1-5 atau 1-4 seperti instrumen lain.
 Jangan ubah ke 1-5 lagi — ini keputusan final berdasarkan pertimbangan konteks 3T.
 Jika ada instrumen baru yang butuh Likert, gunakan 1-3 sebagai standar untuk siswa SMP 3T.
+
+**[4 Agustus 2026 — Sesi 4]**
+- **Bug Fix — Navigasi Profil Salah (Race Condition)**
+  - Root cause: dua async fetch tumpang tindih — fetch siswa default (res[0]) overwrite fetch siswa target dari ClassAnalytics
+  - Fix: `useState(() => initialStudentId || '')` — inisialisasi langsung dari prop
+  - Fix: `setSelectedStudentId(prev => prev || ...)` — functional update, cek nilai saat resolve
+  - Fix: `let cancelled = false` pattern — guard fetch lama saat selectedStudentId berubah
+  - File: `src/pages/guru/IntegratedProfile.tsx`
+
+- **Fitur Baru — Filter Kelas di Tab Profil Individu**
+  - Chip buttons "Filter Kelas" (Semua / 7A / 7B / dst.) di atas dropdown siswa
+  - Auto-select siswa pertama dari kelas yang dipilih via `handleFilterKelasChange()`
+  - Hapus fitur search input dari dropdown — filter chip kelas sudah cukup
+  - File: `src/pages/guru/IntegratedProfile.tsx`
+
+- **Fix Filter Kelas Mengubah Semua Statistik Analitik Kelas**
+  - Tambah `studentBreakdown[]` per-siswa di `getClassAnalyticsSummary()` (dataService.ts)
+  - Setiap entry: id, nama, kelas_id, tingkatRisiko, akpdPrioritas, aumLevel, bullyingPeran, motivasiLevel, selfEsteemLevel, miTopDomain, risikoPerilakuLevel, kondisiKeluargaLabels, flags
+  - Fungsi `buildDisplayStats(breakdown[])` dalam ClassAnalytics.tsx menghitung ulang semua chart dari breakdown yang difilter
+  - `useMemo` — semua chart + kartu ikut berubah saat filter kelas aktif
+  - Files: `src/services/dataService.ts`, `src/pages/guru/ClassAnalytics.tsx`
+
+- **Fitur Baru — Kartu Kondisi Keluarga di Analitik Kelas**
+  - 4 kartu: 💔 Broken Home | 🕊️ Yatim Piatu | 🌿 Yatim | 🌸 Piatu
+  - Bersumber dari label `labelSituasiKeluarga` asesmen Deteksi Risiko Perilaku (Q61)
+  - Ikut difilter saat filter kelas aktif
+  - File: `src/pages/guru/ClassAnalytics.tsx`
+
+- **Fix Radar Chart — 0 untuk Instrumen Belum Diisi (bukan 50)**
+  - Default nilai dari `50` → `0` untuk instrumen null di `computeRadarAxes()`
+  - Radar polygon hanya pada sumbu instrumen yang sudah diisi siswa
+  - File: `src/pages/guru/IntegratedProfile.tsx`
+
+- **Animasi Filter Kelas di ClassAnalytics**
+  - `scale-105` + shadow pada tombol aktif; `active:scale-95` saat ditekan
+  - Badge nama kelas aktif dengan `animate-in fade-in`
+  - Tabel siswa: fade out → 200ms → fade+slide in saat filter berubah
+  - File: `src/pages/guru/ClassAnalytics.tsx`
+
+- **Mobile Optimization**
+  - DashboardGuru tabs: ikon saja di mobile, ikon+teks di desktop (sm:)
+  - ClassAnalytics: 2-kolom summary cards di mobile, card list tap-friendly di tabel siswa
+  - Files: `src/pages/guru/DashboardGuru.tsx`, `src/pages/guru/ClassAnalytics.tsx`
+
+- TypeScript: 100% clean (npx tsc --noEmit = exit code 0)
+- Git: **BELUM di-push** — menunggu konfirmasi user
+
+### ⚠️ Catatan Penting Filter Kelas (Sesi 4)
+- `studentBreakdown` di summary adalah sumber kebenaran untuk filter client-side di ClassAnalytics
+- Radar chart menggunakan `0` untuk instrumen null — JANGAN ubah kembali ke 50
+- `handleFilterKelasChange()` di IntegratedProfile.tsx auto-select siswa pertama — JANGAN ganti dengan `setFilterKelas()` langsung
+- Dropdown profil individu sudah TIDAK memiliki search input
+
+
+**[4 Agustus 2026 — Sesi 4 Lanjutan]**
+- **Kartu Kondisi Keluarga Clickable + Modal Nama Siswa**
+  - Klik kartu (count > 0) buka modal daftar nama siswa yang matching
+  - Tiap nama di modal clickable: tutup modal + navigate ke profil siswa (dengan kelas_id)
+  - Disabled + opacity-60 jika count = 0, hint "Klik untuk lihat" jika ada data
+  - File: `src/pages/guru/ClassAnalytics.tsx`
+
+- **Loading Effect 1 Detik saat Filter Kelas Berubah**
+  - State `isFiltering` + `setTimeout(1000)` menggantikan `requestAnimationFrame(200ms)`
+  - Dua lapisan visual: spinner kecil di toolbar + modal floating "Memuat Data [nama kelas]"
+  - File: `src/pages/guru/ClassAnalytics.tsx`
+
+- **Fix Label Mapping Kondisi Keluarga (Bug Kritis)**
+  - Root cause: `'YATIM / PIATU'` (salah satu meninggal) digabung ke bucket `'YATIM PIATU'` (kedua meninggal)
+  - Fix: 4 kartu baru sesuai label ruleEngine yang sebenarnya:
+    - 💔 Broken Home → `BROKEN HOME` (q61===2, cerai/pisah)
+    - 🕊️ Yatim Piatu → `YATIM PIATU` (kedua meninggal)
+    - 🌿 Salah Satu Meninggal → `YATIM / PIATU` (q61===3, salah satu meninggal)
+    - 💸 Ekonomi Lemah → `EKONOMI LEMAH` (q65===4)
+  - Setiap kartu punya `matchFn` function sendiri — tidak ada tumpang tindih antar bucket
+  - File: `src/pages/guru/ClassAnalytics.tsx`
+
+- **Fitur Baru — Statistik Partisipasi 8 Asesmen**
+  - Section "Partisipasi Pengisian Asesmen" di Analitik Kelas (antara Kondisi Keluarga & chart AKPD)
+  - 8 progress bars gradient berbeda per asesmen, animasi fill 1s ease-out
+  - `assessmentCounts` dihitung di `buildDisplayStats` (non-null field = sudah mengisi)
+  - `hasSociometri: boolean` ditambahkan ke `studentBreakdown` di dataService.ts
+  - Ikut filter kelas, ada badge %, count n/total, rata-rata partisipasi di footer
+  - Files: `src/services/dataService.ts`, `src/pages/guru/ClassAnalytics.tsx`
+
+- **Fix Navigasi ke Profil — Auto-Set Filter Kelas**
+  - Root cause: `onNavigateToProfile(studentId)` tidak membawa `kelas_id`
+  - Fix chain: call site → `onNavigateToProfile(id, kelas_id)` → DashboardGuru simpan `profileKelasId` → IntegratedProfile terima `initialKelasId` prop → `setFilterKelas(initialKelasId)`
+  - Semua titik navigasi sudah meneruskan kelas_id: modal kondisi keluarga, tabel berisiko mobile/desktop
+  - Files: `src/pages/guru/ClassAnalytics.tsx`, `src/pages/guru/DashboardGuru.tsx`, `src/pages/guru/IntegratedProfile.tsx`
+
+- **Fix DSS Scoring — Siswa Belum Mengisi Asesmen (Bug Kritis)**
+  - Bug 1: Sosiometri selalu dihitung → kelas belum isi sosiometri = semua siswa "Terisolasi" = +25 = DSS Sedang
+  - Fix 1 (dataService.ts): `classHasSociometriData` check — sosiometri hanya masuk DSS jika ada partisipasi di kelas
+  - Bug 2: `generateDSSAnalysis` tanpa guard tetap proses skor meski 0 asesmen diisi
+  - Fix 2 (dssEngine.ts): Early return jika `!adaData` (semua 8 param undefined) → DSS Rendah + ringkasan "Belum ada data"
+  - Files: `src/services/dataService.ts`, `src/services/engine/dssEngine.ts`
+
+- TypeScript: 100% clean di setiap perubahan (npx tsc --noEmit = exit code 0)
+- Git: **BELUM di-push** — menunggu konfirmasi user
+
+### ⚠️ Catatan Penting DSS Scoring (Sesi 4 Lanjutan)
+- Sosiometri hanya masuk DSS jika `classHasSociometriData === true` — JANGAN hapus check ini
+- `generateDSSAnalysis` early return Rendah jika `!adaData` — JANGAN hapus guard ini
+- Label kondisi keluarga: `'YATIM / PIATU'` BERBEDA dari `'YATIM PIATU'` — tidak boleh digabung
+- 4 kartu kondisi keluarga sekarang: Broken Home | Yatim Piatu | Salah Satu Meninggal | Ekonomi Lemah
+
+### ⚠️ Catatan Penting StudentBreakdown (Sesi 4 Lanjutan)
+- `hasSociometri: boolean` ada di type studentBreakdown (dataService.ts) dan StudentRow (ClassAnalytics.tsx)
+- `assessmentCounts` dihitung di `buildDisplayStats` — ikut filter kelas, bukan dari summary global
+- `initialKelasId` prop di IntegratedProfile hanya set `filterKelas` — TIDAK overwrite `selectedStudentId`
+- `onNavigateToProfile` signature: `(studentId: string, kelasId?: string) => void`

@@ -540,6 +540,7 @@ export class DataService {
     const summary = {
       totalSiswa: students.length,
       totalKelas: classes.length,
+      classes: classes,
       riskLevels: {
         'Sangat Tinggi': 0,
         'Tinggi': 0,
@@ -562,7 +563,51 @@ export class DataService {
         'Korban Ringan': 0,
         'Korban Sangat Rentan': 0
       } as Record<string, number>,
-      miDomains: {} as Record<string, number>
+      miDomains: {} as Record<string, number>,
+      // NEW: Motivasi & Self-Esteem distributions
+      motivasiLevels: {
+        'Sangat Tinggi': 0, 'Tinggi': 0, 'Sedang': 0, 'Rendah': 0, 'Sangat Rendah': 0
+      } as Record<string, number>,
+      selfEsteemLevels: {
+        'Tinggi': 0, 'Sedang': 0, 'Rendah': 0
+      } as Record<string, number>,
+      risikoPerilakuLevels: {
+        'Tinggi': 0, 'Sedang': 0, 'Rendah': 0
+      } as Record<string, number>,
+      // NEW: List of high-risk students
+      highRiskStudents: [] as Array<{
+        id: string;
+        nama: string;
+        kelas_nama: string;
+        kelas_id: string;
+        tingkatRisiko: string;
+        flags: string[];
+      }>,
+      // Per-student breakdown — used for client-side filtering by class
+      studentBreakdown: [] as Array<{
+        id: string;
+        nama: string;
+        kelas_id: string;
+        kelas_nama: string;
+        tingkatRisiko: string;
+        akpdPrioritas: string | null;
+        aumLevel: string | null;
+        bullyingPeran: string | null;
+        motivasiLevel: string | null;
+        selfEsteemLevel: string | null;
+        miTopDomain: string | null;
+        risikoPerilakuLevel: string | null;
+        hasSociometri: boolean;
+        kondisiKeluargaLabels: string[];
+        flags: string[];
+      }>,
+      // Kondisi keluarga aggregate
+      kondisiKeluargaCounts: {
+        'BROKEN HOME': 0,
+        'YATIM PIATU': 0,
+        'YATIM': 0,
+        'PIATU': 0,
+      } as Record<string, number>,
     };
 
     const mappedChoices = allSociometric.map(c => ({
@@ -583,7 +628,6 @@ export class DataService {
         let motivasiRes: MotivasiResult | undefined;
         let selfEsteemRes: SelfEsteemResult | undefined;
         let miRes: MIResult | undefined;
-
         let risikoPerilakuRes: RisikoPerilakuResult | undefined;
 
         studentResponses.forEach(r => {
@@ -597,7 +641,13 @@ export class DataService {
         });
 
         const sociometricRes = calculateSociometry(student.id, classStudents.length, mappedChoices);
-        const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricRes, miRes, risikoPerilakuRes);
+        // Hanya kirim sosiometri ke DSS jika ada siswa di kelas yang sudah mengisi
+        // (jika tidak ada pilihan sosiometri di kelas ini, jangan hukum siswa sbg "terisolasi")
+        const classHasSociometriData = classStudents.some(cs =>
+          mappedChoices.some(c => c.studentId === cs.id)
+        );
+        const sociometricForDSS = classHasSociometriData ? sociometricRes : undefined;
+        const dss = generateDSSAnalysis(akpdRes, aumRes, bullyingRes, motivasiRes, selfEsteemRes, sociometricForDSS, miRes, risikoPerilakuRes);
 
         if (dss?.tingkatRisikoGlobal) {
           summary.riskLevels[dss.tingkatRisikoGlobal] = (summary.riskLevels[dss.tingkatRisikoGlobal] || 0) + 1;
@@ -615,10 +665,81 @@ export class DataService {
           const dom = miRes.topDomains[0];
           summary.miDomains[dom] = (summary.miDomains[dom] || 0) + 1;
         }
+        // NEW: Motivasi levels
+        if (motivasiRes?.tingkatMotivasi) {
+          summary.motivasiLevels[motivasiRes.tingkatMotivasi] = (summary.motivasiLevels[motivasiRes.tingkatMotivasi] || 0) + 1;
+        }
+        // NEW: Self-Esteem levels
+        if (selfEsteemRes?.tingkat) {
+          summary.selfEsteemLevels[selfEsteemRes.tingkat] = (summary.selfEsteemLevels[selfEsteemRes.tingkat] || 0) + 1;
+        }
+        // NEW: Risiko Perilaku levels
+        if (risikoPerilakuRes?.levelRisikoPerilaku) {
+          summary.risikoPerilakuLevels[risikoPerilakuRes.levelRisikoPerilaku] = (summary.risikoPerilakuLevels[risikoPerilakuRes.levelRisikoPerilaku] || 0) + 1;
+        }
+        // Build student breakdown entry (for all students)
+        const flags: string[] = [];
+        if (aumRes?.tingkatMasalah === 'Tinggi') flags.push('AUM Berat');
+        if (bullyingRes && bullyingRes.peran !== 'Aman') flags.push(`Bullying: ${bullyingRes.peran}`);
+        if (motivasiRes && (['Rendah', 'Sangat Rendah'] as string[]).includes(motivasiRes.tingkatMotivasi as string)) flags.push('Motivasi Rendah');
+        if (selfEsteemRes?.tingkat === 'Rendah') flags.push('Self-Esteem Rendah');
+        if (risikoPerilakuRes?.levelRisikoPerilaku === 'Tinggi') flags.push('Risiko Perilaku Tinggi');
+        if (akpdRes?.prioritasUtama) flags.push(`AKPD: ${akpdRes.prioritasUtama}`);
+        const kondisiKeluargaLabels = risikoPerilakuRes?.labelSituasiKeluarga || [];
+
+        const hasSociometri = mappedChoices.some(c => c.studentId === student.id);
+
+        summary.studentBreakdown.push({
+          id: student.id,
+          nama: student.nama,
+          kelas_id: student.kelas_id,
+          kelas_nama: student.kelas_nama,
+          tingkatRisiko: dss?.tingkatRisikoGlobal || 'Rendah',
+          akpdPrioritas: akpdRes?.prioritasUtama || null,
+          aumLevel: aumRes?.tingkatMasalah || null,
+          bullyingPeran: bullyingRes?.peran || null,
+          motivasiLevel: motivasiRes?.tingkatMotivasi || null,
+          selfEsteemLevel: selfEsteemRes?.tingkat || null,
+          miTopDomain: miRes?.topDomains?.[0] || null,
+          risikoPerilakuLevel: risikoPerilakuRes?.levelRisikoPerilaku || null,
+          hasSociometri,
+          kondisiKeluargaLabels,
+          flags,
+        });
+
+        // Kondisi keluarga aggregate
+        if (kondisiKeluargaLabels.includes('BROKEN HOME')) summary.kondisiKeluargaCounts['BROKEN HOME']++;
+        if (kondisiKeluargaLabels.includes('YATIM PIATU') || kondisiKeluargaLabels.includes('YATIM / PIATU')) {
+          summary.kondisiKeluargaCounts['YATIM PIATU']++;
+        } else if (kondisiKeluargaLabels.includes('YATIM')) {
+          summary.kondisiKeluargaCounts['YATIM']++;
+        } else if (kondisiKeluargaLabels.includes('PIATU')) {
+          summary.kondisiKeluargaCounts['PIATU']++;
+        }
+
+        // NEW: High-risk students list
+        const isHighRisk = dss?.tingkatRisikoGlobal === 'Sangat Tinggi' || dss?.tingkatRisikoGlobal === 'Tinggi';
+        if (isHighRisk) {
+          summary.highRiskStudents.push({
+            id: student.id,
+            nama: student.nama,
+            kelas_nama: student.kelas_nama,
+            kelas_id: student.kelas_id,
+            tingkatRisiko: dss.tingkatRisikoGlobal,
+            flags,
+          });
+        }
       } catch (err) {
         console.error(`Error calculating analytics for student ${student.id}:`, err);
       }
     }
+
+    // Sort high-risk students: Sangat Tinggi first
+    summary.highRiskStudents.sort((a, b) => {
+      if (a.tingkatRisiko === 'Sangat Tinggi' && b.tingkatRisiko !== 'Sangat Tinggi') return -1;
+      if (b.tingkatRisiko === 'Sangat Tinggi' && a.tingkatRisiko !== 'Sangat Tinggi') return 1;
+      return a.nama.localeCompare(b.nama);
+    });
 
     return summary;
   }
