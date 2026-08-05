@@ -745,9 +745,6 @@ export const ClassAnalytics: React.FC<ClassAnalyticsProps> = ({ onNavigateToProf
                       <p className="text-sm font-bold text-slate-800 group-hover:text-emerald-700 truncate">{student.nama}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-[10px] text-slate-400 font-medium">Kelas {student.kelas_nama}</span>
-                        {student.akpdPrioritas && (
-                          <span className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md">AKPD: {student.akpdPrioritas}</span>
-                        )}
                       </div>
                     </div>
                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg border ${cfg.badge} shrink-0`}>{risikoModal.level}</span>
